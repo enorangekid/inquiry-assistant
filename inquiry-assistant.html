@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문의 답변 자동화</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --ink:#0f0e0c;
+  --ink2:#4a4740;
+  --ink3:#8c8880;
+  --paper:#faf9f6;
+  --paper2:#f2f0eb;
+  --paper3:#e8e4dc;
+  --line:#dedad2;
+  --line2:#ccc8bf;
+  --green:#1a4a30;
+  --green-mid:#2d6a4f;
+  --green-light:#e8f2ec;
+  --green-pale:#f0f7f2;
+  --red:#8b2020;
+  --r:12px;
+}
+
+body{
+  font-family:'Noto Sans KR',sans-serif;
+  background:var(--paper);
+  color:var(--ink);
+  min-height:100vh;
+  padding:40px 20px 80px;
+}
+
+/* 배경 패턴 */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(26,74,48,0.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(26,74,48,0.03) 0%, transparent 50%);
+  pointer-events:none;
+  z-index:0;
+}
+
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto}
+
+/* 헤더 */
+header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:28px;
+  padding-bottom:20px;
+  border-bottom:1px solid var(--line);
+}
+
+.brand{display:flex;align-items:center;gap:14px}
+
+.logo-mark{
+  width:40px;height:40px;
+  background:var(--green);
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+
+.logo-mark::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,0.12) 0%,transparent 60%);
+}
+
+.logo-mark svg{width:20px;height:20px;fill:white;position:relative}
+
+.brand-text h1{
+  font-family:'DM Serif Display',serif;
+  font-size:18px;
+  font-weight:400;
+  color:var(--ink);
+  letter-spacing:-0.3px;
+}
+
+.brand-text p{
+  font-size:11px;
+  color:var(--ink3);
+  font-weight:300;
+  margin-top:1px;
+}
+
+.header-badge{
+  font-size:10px;
+  font-weight:500;
+  color:var(--green-mid);
+  background:var(--green-pale);
+  border:1px solid rgba(45,106,79,0.2);
+  padding:4px 10px;
+  border-radius:20px;
+  letter-spacing:0.3px;
+}
+
+/* 툴바 */
+.toolbar{
+  background:white;
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  padding:14px 18px;
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+}
+
+.tb-group{display:flex;align-items:center;gap:8px}
+
+.tb-label{
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink3);
+  letter-spacing:0.8px;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+.tb-div{width:1px;height:20px;background:var(--line);flex-shrink:0}
+
+/* 세그먼트 버튼 */
+.seg{
+  display:flex;
+  border:1px solid var(--line2);
+  border-radius:8px;
+  overflow:hidden;
+  background:var(--paper2);
+}
+
+.seg button{
+  padding:5px 14px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:12px;
+  font-weight:500;
+  border:none;
+  background:transparent;
+  color:var(--ink2);
+  cursor:pointer;
+  transition:all 0.15s;
+  white-space:nowrap;
+}
+
+.seg button.active{
+  background:var(--green);
+  color:white;
+}
+
+.seg button:not(:last-child){border-right:1px solid var(--line2)}
+
+/* 메인 그리드 */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:16px;
+}
+
+@media(max-width:660px){.grid{grid-template-columns:1fr}}
+
+/* 패널 */
+.panel{
+  background:white;
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 1px 4px rgba(0,0,0,0.04);
+  overflow:hidden;
+}
+
+.panel-head{
+  padding:12px 18px;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  background:var(--paper2);
+}
+
+.panel-label{
+  font-size:10px;
+  font-weight:600;
+  color:var(--ink3);
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+
+.char-count{font-size:11px;color:var(--ink3)}
+
+textarea{
+  flex:1;
+  width:100%;
+  min-height:340px;
+  border:none;
+  outline:none;
+  resize:none;
+  padding:18px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:13px;
+  line-height:1.8;
+  color:var(--ink);
+  background:transparent;
+  caret-color:var(--green-mid);
+}
+
+textarea::placeholder{color:var(--ink3);font-weight:300}
+
+.panel-foot{
+  padding:12px 18px;
+  border-top:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  background:var(--paper2);
+}
+
+/* 버튼 */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:7px 16px;
+  border-radius:8px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  border:1px solid var(--line2);
+  background:transparent;
+  color:var(--ink2);
+  transition:all 0.12s;
+}
+
+.btn:hover{background:var(--paper2)}
+.btn:active{transform:scale(0.98)}
+.btn:disabled{opacity:0.35;cursor:not-allowed}
+
+.btn-primary{
+  background:var(--green);
+  color:white;
+  border-color:var(--green);
+  letter-spacing:0.2px;
+}
+
+.btn-primary:hover{background:var(--green-mid)}
+
+.btn-copy{
+  border-color:rgba(45,106,79,0.3);
+  color:var(--green-mid);
+  font-size:12px;
+  padding:4px 12px;
+}
+
+.btn-copy:hover{background:var(--green-pale)}
+.btn-copy.copied{background:var(--green-pale);color:var(--green)}
+
+/* 답변 패널 */
+.answer-panel .panel-head{
+  background:var(--green-pale);
+  border-bottom-color:rgba(45,106,79,0.15);
+}
+
+.answer-body{
+  flex:1;
+  padding:18px;
+  font-size:13px;
+  line-height:1.85;
+  color:var(--ink);
+  min-height:340px;
+  white-space:pre-wrap;
+  word-break:break-word;
+}
+.answer-edit{
+  flex:1;
+  width:100%;
+  min-height:340px;
+  border:none;
+  outline:none;
+  resize:none;
+  padding:18px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:13px;
+  line-height:1.85;
+  color:var(--ink);
+  background:transparent;
+  caret-color:var(--green-mid);
+}
+.edit-indicator{
+  font-size:10px;
+  color:var(--green-mid);
+  font-weight:500;
+  letter-spacing:0.3px;
+  opacity:0.7;
+}
+
+.placeholder{color:var(--ink3);font-size:13px;font-weight:300}
+
+/* 스켈레톤 */
+.skel{
+  height:13px;
+  background:linear-gradient(90deg,var(--paper2) 25%,var(--paper3) 50%,var(--paper2) 75%);
+  background-size:200% 100%;
+  border-radius:4px;
+  margin-bottom:12px;
+  animation:shimmer 1.6s infinite;
+}
+
+.skel:nth-child(2){width:78%}
+.skel:nth-child(3){width:91%}
+.skel:nth-child(4){width:62%}
+.skel:nth-child(5){width:85%}
+
+@keyframes shimmer{
+  0%{background-position:200% 0}
+  100%{background-position:-200% 0}
+}
+
+/* 상태바 */
+.status-bar{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:12px;
+  min-height:22px;
+}
+
+.dot{
+  width:6px;height:6px;
+  border-radius:50%;
+  background:var(--line2);
+  flex-shrink:0;
+}
+
+.dot.on{background:var(--green-mid);animation:pulse 1.4s infinite}
+.dot.err{background:var(--red)}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+
+.status-msg{font-size:12px;color:var(--ink3);font-weight:300}
+.status-msg.err{color:var(--red)}
+
+/* 하단 메타 */
+.meta-info{font-size:11px;color:var(--ink3);font-weight:300}
+
+
+/* 상품 선택 바 */
+.product-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 18px;
+  border-bottom:1px solid var(--line);
+  background:var(--paper);
+}
+.product-label{
+  font-size:11px;
+  font-weight:600;
+  color:var(--ink3);
+  letter-spacing:0.8px;
+  text-transform:uppercase;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+.product-bar select{
+  flex:1;
+  border:1px solid var(--line2);
+  border-radius:7px;
+  padding:5px 10px;
+  font-family:'Noto Sans KR',sans-serif;
+  font-size:12px;
+  color:var(--ink2);
+  background:white;
+  outline:none;
+  cursor:pointer;
+  appearance:none;
+  -webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238c8880' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C%2Fsvg%3E");
+  background-repeat:no-repeat;
+  background-position:right 10px center;
+  padding-right:28px;
+}
+.product-bar select:focus{border-color:var(--green-mid)}
+
+/* 페이드인 */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(8px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+header{animation:fadeUp 0.4s ease both}
+.toolbar{animation:fadeUp 0.4s 0.08s ease both}
+.grid{animation:fadeUp 0.4s 0.16s ease both}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="brand-text">
+      <h1>문의 답변 자동화</h1>
+      <p>AI 답변 초안 생성기</p>
+    </div>
+  </div>
+  <div class="header-badge">Gemini 2.5 Flash</div>
+</header>
+
+<div class="toolbar">
+  <div class="tb-group">
+    <span class="tb-label">스토어</span>
+    <div class="seg" id="storeSeg">
+      <button class="active" data-val="energuard">에너가드컴퍼니</button>
+      <button data-val="korean">한국단열</button>
+    </div>
+  </div>
+  <div class="tb-div"></div>
+  <div class="tb-group">
+    <span class="tb-label">모드</span>
+    <div class="seg" id="modeSeg">
+      <button class="active" data-val="simple">심플</button>
+      <button data-val="detail">심화</button>
+    </div>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <div class="panel-head">
+      <span class="panel-label">고객 문의</span>
+      <span class="char-count" id="cc">0자</span>
+    </div>
+    <div class="product-bar">
+      <span class="product-label">상품</span>
+      <select id="productSel">
+        <option value="">— 자동 인식 —</option>
+        <optgroup label="열반사 단열재">
+          <option value="빌트론 열반사 단열재">빌트론 열반사 단열재</option>
+          <option value="불연 열반사 단열재">불연 열반사 단열재</option>
+          <option value="준불연 열반사 단열재">준불연 열반사 단열재</option>
+        </optgroup>
+        <optgroup label="아이소핑크 / 스티로폼">
+          <option value="아이소핑크 (XPS)">아이소핑크 (XPS)</option>
+          <option value="비드법 1종 스티로폼">비드법 1종 스티로폼</option>
+          <option value="비드법 2종 네오폴">비드법 2종 네오폴</option>
+        </optgroup>
+        <optgroup label="단열벽지 / 창문형">
+          <option value="단열벽지 (하우스앤네이처)">단열벽지</option>
+          <option value="창문형 단열재">창문형 단열재</option>
+        </optgroup>
+        <optgroup label="고급 단열재">
+          <option value="경질우레탄 보드">경질우레탄 보드</option>
+          <option value="준불연 경질우레탄">준불연 경질우레탄</option>
+          <option value="PF보드">PF보드</option>
+          <option value="불연단열재">불연단열재</option>
+        </optgroup>
+        <optgroup label="부자재">
+          <option value="우레탄폼본드">우레탄폼본드</option>
+          <option value="스프레이접착제">스프레이접착제</option>
+          <option value="열선커터기">열선커터기</option>
+        </optgroup>
+        <optgroup label="뿜칠폼">
+          <option value="우레탄 뿜칠폼 경질">우레탄 뿜칠폼 (경질)</option>
+          <option value="우레탄 뿜칠폼 연질">우레탄 뿜칠폼 (연질)</option>
+        </optgroup>
+        <optgroup label="어싱">
+          <option value="어싱매트 / 어싱패드">어싱매트 / 어싱패드</option>
+        </optgroup>
+      </select>
+    </div>
+    <textarea id="inq" placeholder="고객 문의를 여기에 붙여넣으세요.
+
+예시:
+안녕하세요.
+베란다 창문 단열 목적으로 구매하려 합니다.
+1. 어떤 제품이 맞나요?
+2. 두께 선택 기준이 궁금합니다."></textarea>
+    <div class="panel-foot">
+      <button class="btn" id="clearBtn">지우기</button>
+      <button class="btn btn-primary" id="genBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        답변 생성
+      </button>
+    </div>
+  </div>
+
+  <div class="panel answer-panel">
+    <div class="panel-head">
+      <span class="panel-label">생성된 답변</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="edit-indicator" id="editIndicator" style="display:none">✎ 편집 가능</span>
+        <button class="btn btn-copy" id="copyBtn" style="display:none">복사</button>
+      </div>
+    </div>
+    <div class="answer-body" id="answerBody">
+      <span class="placeholder">답변이 여기에 표시됩니다.</span>
+    </div>
+    <div class="panel-foot">
+      <span class="meta-info" id="metaInfo"></span>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div class="dot" id="dot"></div>
+  <span class="status-msg" id="statusMsg"></span>
+</div>
+
+</div>
+<script>
+const EDGE_URL = 'https://eukwfypbfqojbaihfqye.supabase.co/functions/v1/inquiry-assistant-';
+
+const inq = document.getElementById('inq');
+const cc = document.getElementById('cc');
+const genBtn = document.getElementById('genBtn');
+const clearBtn = document.getElementById('clearBtn');
+const copyBtn = document.getElementById('copyBtn');
+const answerBody = document.getElementById('answerBody');
+const dot = document.getElementById('dot');
+const statusMsg = document.getElementById('statusMsg');
+const metaInfo = document.getElementById('metaInfo');
+
+let selectedStore = 'energuard';
+let selectedMode = 'simple';
+
+document.getElementById('storeSeg').addEventListener('click', e => {
+  if (!e.target.dataset.val) return;
+  selectedStore = e.target.dataset.val;
+  document.querySelectorAll('#storeSeg button').forEach(b => b.classList.toggle('active', b.dataset.val === selectedStore));
+});
+
+document.getElementById('modeSeg').addEventListener('click', e => {
+  if (!e.target.dataset.val) return;
+  selectedMode = e.target.dataset.val;
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('active', b.dataset.val === selectedMode));
+});
+
+inq.addEventListener('input', () => { cc.textContent = inq.value.length + '자'; });
+clearBtn.addEventListener('click', () => { inq.value = ''; cc.textContent = '0자'; inq.focus(); });
+
+function setStatus(type, msg) {
+  dot.className = 'dot' + (type ? ' ' + type : '');
+  statusMsg.className = 'status-msg' + (type === 'err' ? ' err' : '');
+  statusMsg.textContent = msg;
+}
+
+function showSkeleton() {
+  const prev = document.querySelector('.answer-edit');
+  if (prev) prev.remove();
+  answerBody.style.display = 'block';
+  answerBody.innerHTML = '<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  document.getElementById('editIndicator').style.display = 'none';
+}
+
+genBtn.addEventListener('click', async () => {
+  const text = inq.value.trim();
+  if (!text) { setStatus('err', '문의 내용을 입력해주세요.'); return; }
+
+  genBtn.disabled = true;
+  copyBtn.style.display = 'none';
+  showSkeleton();
+  metaInfo.textContent = '';
+  setStatus('on', '답변 생성 중...');
+
+  try {
+    const res = await fetch(EDGE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inquiry: (document.getElementById('productSel').value ? '[상품: ' + document.getElementById('productSel').value + ']\n\n' + text : text), store: selectedStore, mode: selectedMode })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || '서버 오류');
+
+    // 답변창을 편집 가능한 textarea로 교체
+    const editArea = document.createElement('textarea');
+    editArea.className = 'answer-edit';
+    editArea.value = data.answer;
+    answerBody.style.display = 'none';
+    answerBody.parentNode.insertBefore(editArea, answerBody);
+    document.getElementById('editIndicator').style.display = 'inline';
+    copyBtn.style.display = 'inline-flex';
+    const storeLabel = selectedStore === 'korean' ? '한국단열' : '에너가드컴퍼니';
+    const modeLabel = selectedMode === 'simple' ? '심플' : '심화';
+    metaInfo.textContent = `${storeLabel} · ${modeLabel} 모드`;
+    setStatus('', '완료');
+  } catch(e) {
+    const prevEdit = document.querySelector('.answer-edit');
+    if (prevEdit) prevEdit.remove();
+    answerBody.style.display = 'block';
+    answerBody.innerHTML = '<span class="placeholder">오류: ' + e.message + '</span>';
+    setStatus('err', '오류: ' + e.message);
+  } finally {
+    genBtn.disabled = false;
+  }
+});
+
+copyBtn.addEventListener('click', () => {
+  const editArea = document.querySelector('.answer-edit');
+  const copyText = editArea ? editArea.value : answerBody.textContent;
+  navigator.clipboard.writeText(copyText).then(() => {
+    copyBtn.textContent = '복사됨 ✓';
+    copyBtn.classList.add('copied');
+    setTimeout(() => { copyBtn.textContent = '복사'; copyBtn.classList.remove('copied'); }, 2000);
+  });
+});
+
+inq.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') genBtn.click();
+});
+</script>
+</body>
+</html>
